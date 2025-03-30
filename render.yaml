@@ -5,6 +5,6 @@ services:
     repo: https://github.com/ehackerevan/rsmarket.git
     branch: main
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: gunicorn app:application
+    startCommand: gunicorn app:app
     plan: free
     runtime: python-3.9
