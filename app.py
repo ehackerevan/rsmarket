@@ -12,7 +12,7 @@ import json
 
 # 使用絕對路徑指定模板目錄
 template_dir = 'C:/Python/RSMarket/templates'
-application = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder='templates')
 logging.basicConfig(level=logging.INFO)
 
 # 進度變數
