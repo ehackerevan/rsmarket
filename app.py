@@ -10,8 +10,7 @@ import threading
 import os
 import json
 
-# 使用絕對路徑指定模板目錄
-template_dir = 'C:/Python/RSMarket/templates'
+# 初始化 Flask 應用程式
 app = Flask(__name__, template_folder='templates')
 logging.basicConfig(level=logging.INFO)
 
@@ -33,17 +32,35 @@ engine = get_db_connection()
 def init_db():
     try:
         with engine.connect() as conn:
+            # 建立 prices 表
             conn.execute(text('''CREATE TABLE IF NOT EXISTS prices (
-                                 Date TEXT, StockCode TEXT, Close REAL, 
+                                 Date DATE, 
+                                 StockCode VARCHAR(10), 
+                                 Close REAL, 
                                  PRIMARY KEY (Date, StockCode))'''))
+            # 建立 volumes 表
             conn.execute(text('''CREATE TABLE IF NOT EXISTS volumes (
-                                 Date TEXT, StockCode TEXT, Volume REAL, 
+                                 Date DATE, 
+                                 StockCode VARCHAR(10), 
+                                 Volume REAL, 
                                  PRIMARY KEY (Date, StockCode))'''))
+            # 建立 filtered_stocks 表
             conn.execute(text('''CREATE TABLE IF NOT EXISTS filtered_stocks (
-                                 Date TEXT, StockCode TEXT, CompanyName TEXT, Price REAL, RS REAL, PR REAL, Volume REAL, FilterType TEXT, ExtraInfo TEXT,
+                                 Date DATE, 
+                                 StockCode VARCHAR(10), 
+                                 CompanyName VARCHAR(100), 
+                                 Price REAL, 
+                                 RS REAL, 
+                                 PR REAL, 
+                                 Volume REAL, 
+                                 FilterType VARCHAR(50), 
+                                 ExtraInfo TEXT,
                                  PRIMARY KEY (Date, StockCode, FilterType))'''))
+            # 建立 pr_values 表
             conn.execute(text('''CREATE TABLE IF NOT EXISTS pr_values (
-                                 Date TEXT, StockCode TEXT, PR REAL, 
+                                 Date DATE, 
+                                 StockCode VARCHAR(10), 
+                                 PR REAL, 
                                  PRIMARY KEY (Date, StockCode))'''))
             conn.commit()
         logging.info("資料庫初始化成功")
@@ -65,7 +82,7 @@ def get_listed_stock_codes():
         logging.error(f"獲取股票代碼失敗: {e}")
         return ['^TWII']
 
-# 下載股票資料
+# 下載股票資料並插入資料庫
 def download_stock_data(stock_codes, start_date, end_date):
     global progress
     stock_data = {'Close': {}, 'Volume': {}}
@@ -78,6 +95,7 @@ def download_stock_data(stock_codes, start_date, end_date):
                     if df.empty or 'Close' not in df.columns or 'Volume' not in df.columns:
                         logging.warning(f"股票 {code} 無有效資料")
                         continue
+                    # 處理收盤價資料
                     closing_prices = df['Close'].reset_index()
                     closing_prices['Date'] = closing_prices['Date'].dt.tz_localize(None)
                     closing_prices.columns = ['Date', code]
@@ -85,9 +103,15 @@ def download_stock_data(stock_codes, start_date, end_date):
                     for _, row in closing_prices.iterrows():
                         if pd.notna(row[code]):
                             conn.execute(
-                                text("INSERT OR REPLACE INTO prices (Date, StockCode, Close) VALUES (:date, :code, :close)"),
+                                text("""
+                                INSERT INTO prices (Date, StockCode, Close)
+                                VALUES (:date, :code, :close)
+                                ON CONFLICT (Date, StockCode)
+                                DO UPDATE SET Close = EXCLUDED.Close
+                                """),
                                 {'date': row['Date'].strftime('%Y-%m-%d'), 'code': code, 'close': row[code]}
                             )
+                    # 處理成交量資料
                     volumes = df['Volume'].reset_index()
                     volumes['Date'] = volumes['Date'].dt.tz_localize(None)
                     volumes.columns = ['Date', code]
@@ -95,7 +119,12 @@ def download_stock_data(stock_codes, start_date, end_date):
                     for _, row in volumes.iterrows():
                         if pd.notna(row[code]):
                             conn.execute(
-                                text("INSERT OR REPLACE INTO volumes (Date, StockCode, Volume) VALUES (:date, :code, :volume)"),
+                                text("""
+                                INSERT INTO volumes (Date, StockCode, Volume)
+                                VALUES (:date, :code, :volume)
+                                ON CONFLICT (Date, StockCode)
+                                DO UPDATE SET Volume = EXCLUDED.Volume
+                                """),
                                 {'date': row['Date'].strftime('%Y-%m-%d'), 'code': code, 'volume': row[code]}
                             )
                     progress['value'] = (i + 1) / total_stocks * 50
@@ -203,7 +232,12 @@ def calculate_pr(rs_df):
                     for date, pr_value in pr_series.items():
                         if pd.notna(pr_value):
                             conn.execute(
-                                text("INSERT OR REPLACE INTO pr_values (Date, StockCode, PR) VALUES (:date, :code, :pr)"),
+                                text("""
+                                INSERT INTO pr_values (Date, StockCode, PR)
+                                VALUES (:date, :code, :pr)
+                                ON CONFLICT (Date, StockCode)
+                                DO UPDATE SET PR = EXCLUDED.PR
+                                """),
                                 {'date': date.strftime('%Y-%m-%d'), 'code': stock_code, 'pr': round(pr_value, 2)}
                             )
             conn.commit()
@@ -212,16 +246,26 @@ def calculate_pr(rs_df):
         logging.error(f"儲存 PR 值失敗: {e}")
     return pd.concat(pr_data, axis=1) if pr_data else pd.DataFrame()
 
-# 篩選函數
+# 篩選函數並儲存到資料庫
 def save_filtered_to_db(df, filter_type, extra_info_col=None):
     try:
         with engine.connect() as conn:
             for _, row in df.iterrows():
                 extra_info = row[extra_info_col] if extra_info_col and extra_info_col in row else None
                 conn.execute(
-                    text("""INSERT OR REPLACE INTO filtered_stocks 
-                            (Date, StockCode, CompanyName, Price, RS, PR, Volume, FilterType, ExtraInfo) 
-                            VALUES (:date, :code, :name, :price, :rs, :pr, :volume, :filter_type, :extra_info)"""),
+                    text("""
+                    INSERT INTO filtered_stocks 
+                    (Date, StockCode, CompanyName, Price, RS, PR, Volume, FilterType, ExtraInfo)
+                    VALUES (:date, :code, :name, :price, :rs, :pr, :volume, :filter_type, :extra_info)
+                    ON CONFLICT (Date, StockCode, FilterType)
+                    DO UPDATE SET 
+                        CompanyName = EXCLUDED.CompanyName,
+                        Price = EXCLUDED.Price,
+                        RS = EXCLUDED.RS,
+                        PR = EXCLUDED.PR,
+                        Volume = EXCLUDED.Volume,
+                        ExtraInfo = EXCLUDED.ExtraInfo
+                    """),
                     {
                         'date': row['日期'].strftime('%Y-%m-%d'), 
                         'code': row['代號'], 
