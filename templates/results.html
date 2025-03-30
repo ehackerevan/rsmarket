@@ -1,0 +1,890 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>股票分析</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 50px;
+        }
+
+        .table-container {
+            max-height: 800px;
+            overflow-y: auto;
+            margin-bottom: 40px;
+            width: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            table-layout: fixed;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background-color: #3498db;
+            color: #fff;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+            /* 調整欄寬 */
+            th:nth-child(1), td:nth-child(1) {
+                width: 15%;
+            }
+            /* 日期 */
+            th:nth-child(2), td:nth-child(2) {
+                width: 10%;
+            }
+            /* 公司代號 */
+            th:nth-child(3), td:nth-child(3) {
+                width: 25%;
+                min-width: 150px;
+            }
+            /* 公司名稱 */
+            th:nth-child(4), td:nth-child(4) {
+                width: 10%;
+            }
+            /* 股價 */
+            th:nth-child(5), td:nth-child(5) {
+                width: 10%;
+            }
+            /* PR值 */
+            th:nth-child(6), td:nth-child(6) {
+                width: 15%;
+            }
+            /* 成交量 */
+            th:nth-child(7), td:nth-child(7) {
+                width: 15%;
+            }
+        /* 額外資訊 */
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #2980b9;
+            color: #fff;
+            transition: background-color 0.3s;
+        }
+
+            button:hover {
+                background-color: #1f6391;
+            }
+
+            button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+            }
+
+        .sort-btn {
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-left: 5px;
+            background-color: #ecf0f1;
+            color: #333;
+            border: 1px solid #bdc3c7;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+            .sort-btn:hover {
+                background-color: #d5dbdb;
+            }
+
+        #progress-container {
+            margin: 15px 0;
+            width: 50%;
+            max-width: 600px;
+        }
+
+        #progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #2980b9;
+            transition: width 0.5s ease-in-out;
+        }
+
+        #progress-text {
+            text-align: center;
+            margin-top: 5px;
+            font-weight: bold;
+            color: #2980b9;
+        }
+
+        .company-link {
+            cursor: pointer;
+            color: #2980b9;
+            text-decoration: none;
+        }
+
+            .company-link:hover {
+                text-decoration: underline;
+            }
+
+        .chart-row {
+            display: none;
+        }
+
+            .chart-row td {
+                border: none;
+                padding: 15px;
+                text-align: center; /* 修改：使圖表在單元格內居中 */
+            }
+
+        .chart-container {
+            display: flex;
+            justify-content: center; /* 新增：內部圖表水平居中 */
+            width: 50%;
+            max-width: 50%;
+            gap: 20px;
+            box-sizing: border-box;
+            margin: 0 auto;
+        }
+
+        .pr-chart, .price-chart {
+            width: 50%;
+            height: 400px;
+        }
+
+        .search-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        #companyCodeInput {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+            border-radius: 5px;
+            border: 1px solid #bdc3c7;
+        }
+
+        #autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 200px;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #fff;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            color: #333;
+        }
+
+            .autocomplete-item:hover {
+                background-color: #ecf0f1;
+            }
+
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+
+        .loading {
+            font-style: italic;
+            color: #7f8c8d;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>股票分析結果</h1>
+    <div class="search-container">
+        <input type="text" id="companyCodeInput" placeholder="輸入公司代號 (如 2330)" autocomplete="off">
+        <div id="autocomplete-list"></div>
+        <button id="showCompanyBtn" style="margin-left: 10px;">查詢公司</button>
+    </div>
+    <div id="companyDetail"></div>
+    <button id="fetchDataBtn">抓取最新資料</button>
+    <div id="progress-container">
+        <div id="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+        <div id="progress-text">進度: 0% - 未開始</div>
+    </div>
+
+    <h2>最近一天 PR > 90 且成交量 > 500 張且股價 > 60EMA 的公司</h2>
+    <div class="table-container">
+        <table id="highPrTable">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>公司代號</th>
+                    <th>公司名稱</th>
+                    <th>股價 <button class="sort-btn" data-table="highPrTable" data-column="Price" data-order="asc">↑</button><button class="sort-btn" data-table="highPrTable" data-column="Price" data-order="desc">↓</button></th>
+                    <th>PR值 <button class="sort-btn" data-table="highPrTable" data-column="PR" data-order="asc">↑</button><button class="sort-btn" data-table="highPrTable" data-column="PR" data-order="desc">↓</button></th>
+                    <th>成交量(張)</th>
+                    <th>連續天數</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if high_pr %}
+                {% for row in high_pr %}
+                <tr>
+                    <td>{{ row.Date }}</td>
+                    <td><span class="company-link" data-code="{{ row.StockCode }}">{{ row.StockCode }}</span></td>
+                    <td>{{ row.CompanyName }}</td>
+                    <td>{{ row.Price }}</td>
+                    <td>{{ row.PR }}</td>
+                    <td>{{ row.Volume }}</td>
+                    <td>{{ row.ExtraInfo }}</td>
+                </tr>
+                <tr class="chart-row" data-code="{{ row.StockCode }}">
+                    <td colspan="7">
+                        <div class="chart-container">
+                            <canvas class="pr-chart"></canvas>
+                            <canvas class="price-chart"></canvas>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="7">尚無資料</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2>最近一天 PR 創 60 或 240 天新高且 PR > 70 的公司</h2>
+    <div class="table-container">
+        <table id="prNewHighTable">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>公司代號</th>
+                    <th>公司名稱</th>
+                    <th>股價 <button class="sort-btn" data-table="prNewHighTable" data-column="Price" data-order="asc">↑</button><button class="sort-btn" data-table="prNewHighTable" data-column="Price" data-order="desc">↓</button></th>
+                    <th>PR值 <button class="sort-btn" data-table="prNewHighTable" data-column="PR" data-order="asc">↑</button><button class="sort-btn" data-table="prNewHighTable" data-column="PR" data-order="desc">↓</button></th>
+                    <th>成交量(張)</th>
+                    <th>新高天數</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if pr_new_high %}
+                {% for row in pr_new_high %}
+                <tr>
+                    <td>{{ row.Date }}</td>
+                    <td><span class="company-link" data-code="{{ row.StockCode }}">{{ row.StockCode }}</span></td>
+                    <td>{{ row.CompanyName }}</td>
+                    <td>{{ row.Price }}</td>
+                    <td>{{ row.PR }}</td>
+                    <td>{{ row.Volume }}</td>
+                    <td>{{ row.ExtraInfo }}</td>
+                </tr>
+                <tr class="chart-row" data-code="{{ row.StockCode }}">
+                    <td colspan="7">
+                        <div class="chart-container">
+                            <canvas class="pr-chart"></canvas>
+                            <canvas class="price-chart"></canvas>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="7">尚無資料</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2>最近一天創 60 或 240 天新高且 PR > 70 的公司</h2>
+    <div class="table-container">
+        <table id="newHighTable">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>公司代號</th>
+                    <th>公司名稱</th>
+                    <th>股價 <button class="sort-btn" data-table="newHighTable" data-column="Price" data-order="asc">↑</button><button class="sort-btn" data-table="newHighTable" data-column="Price" data-order="desc">↓</button></th>
+                    <th>PR值 <button class="sort-btn" data-table="newHighTable" data-column="PR" data-order="asc">↑</button><button class="sort-btn" data-table="newHighTable" data-column="PR" data-order="desc">↓</button></th>
+                    <th>成交量(張)</th>
+                    <th>新高天數</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if new_high %}
+                {% for row in new_high %}
+                <tr>
+                    <td>{{ row.Date }}</td>
+                    <td><span class="company-link" data-code="{{ row.StockCode }}">{{ row.StockCode }}</span></td>
+                    <td>{{ row.CompanyName }}</td>
+                    <td>{{ row.Price }}</td>
+                    <td>{{ row.PR }}</td>
+                    <td>{{ row.Volume }}</td>
+                    <td>{{ row.ExtraInfo }}</td>
+                </tr>
+                <tr class="chart-row" data-code="{{ row.StockCode }}">
+                    <td colspan="7">
+                        <div class="chart-container">
+                            <canvas class="pr-chart"></canvas>
+                            <canvas class="price-chart"></canvas>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="7">尚無資料</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2>最近一天 PR < 60 且創 60 或 240 天新低的股票</h2>
+    <div class="table-container">
+        <table id="lowPrNewLowTable">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>公司代號</th>
+                    <th>公司名稱</th>
+                    <th>股價 <button class="sort-btn" data-table="lowPrNewLowTable" data-column="Price" data-order="asc">↑</button><button class="sort-btn" data-table="lowPrNewLowTable" data-column="Price" data-order="desc">↓</button></th>
+                    <th>PR值 <button class="sort-btn" data-table="lowPrNewLowTable" data-column="PR" data-order="asc">↑</button><button class="sort-btn" data-table="lowPrNewLowTable" data-column="PR" data-order="desc">↓</button></th>
+                    <th>成交量(張)</th>
+                    <th>新低天數</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if low_pr_new_low %}
+                {% for row in low_pr_new_low %}
+                <tr>
+                    <td>{{ row.Date }}</td>
+                    <td><span class="company-link" data-code="{{ row.StockCode }}">{{ row.StockCode }}</span></td>
+                    <td>{{ row.CompanyName }}</td>
+                    <td>{{ row.Price }}</td>
+                    <td>{{ row.PR }}</td>
+                    <td>{{ row.Volume }}</td>
+                    <td>{{ row.ExtraInfo }}</td>
+                </tr>
+                <tr class="chart-row" data-code="{{ row.StockCode }}">
+                    <td colspan="7">
+                        <div class="chart-container">
+                            <canvas class="pr-chart"></canvas>
+                            <canvas class="price-chart"></canvas>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="7">尚無資料</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 防抖函數
+        function debounce(func, wait) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // 圖表實例管理
+        const chartInstances = new Map();
+
+        function destroyChart(canvas) {
+            const chart = chartInstances.get(canvas);
+            if (chart) {
+                chart.destroy();
+                chartInstances.delete(canvas);
+            }
+        }
+
+        // 自動完成功能
+        const companyCodeInput = document.getElementById('companyCodeInput');
+        const autocompleteList = document.getElementById('autocomplete-list');
+
+        companyCodeInput.addEventListener('input', debounce(function () {
+            const query = this.value.trim();
+            if (query.length === 0) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+
+            fetch(`/autocomplete?query=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    autocompleteList.innerHTML = '';
+                    if (data.length > 0) {
+                        data.forEach(item => {
+                            const shortCode = item.code.replace('.TW', '');
+                            const div = document.createElement('div');
+                            div.className = 'autocomplete-item';
+                            div.textContent = `${shortCode} - ${item.name}`;
+                            div.addEventListener('click', () => {
+                                companyCodeInput.value = shortCode;
+                                autocompleteList.style.display = 'none';
+                                showCompanyBtn.click();
+                            });
+                            autocompleteList.appendChild(div);
+                        });
+                        autocompleteList.style.display = 'block';
+                    } else {
+                        autocompleteList.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('自動完成失敗:', error);
+                    autocompleteList.style.display = 'none';
+                });
+        }, 300));
+
+        document.addEventListener('click', function (e) {
+            if (!companyCodeInput.contains(e.target) && !autocompleteList.contains(e.target)) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+
+        const showCompanyBtn = document.getElementById('showCompanyBtn');
+        showCompanyBtn.addEventListener('click', function () {
+            let code = companyCodeInput.value.trim();
+            if (code) {
+                code = code.replace(/\.TW$/i, '');
+                if (/^\d{4}$/.test(code)) {
+                    code = `${code}.TW`;
+                }
+                loadCompanyDetail(code);
+            } else {
+                alert('請輸入公司代號');
+            }
+        });
+
+        companyCodeInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                showCompanyBtn.click();
+            }
+        });
+
+        // 載入公司詳細資訊
+        function loadCompanyDetail(code) {
+            const detailDiv = document.getElementById('companyDetail');
+            detailDiv.innerHTML = '<p class="loading">載入中...</p>';
+            fetch(`/get_chart_data/${encodeURIComponent(code)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        detailDiv.innerHTML = `<p class="error">${data.error}</p>`;
+                        return;
+                    }
+
+                    const name = data.company_name || '未知';
+                    const price = data.stock_prices[data.stock_prices.length - 1] || 'N/A';
+                    const pr = data.pr_values[data.pr_values.length - 1] || 'N/A';
+
+                    detailDiv.innerHTML = `
+                            <h2>公司詳細資訊 - ${code}</h2>
+                            <p>公司名稱: ${name}</p>
+                            <p>最新股價: ${price}</p>
+                            <p>最新 PR 值: ${pr}</p>
+                            <div class="chart-container">
+                                <canvas id="detailPrChart"></canvas>
+                                <canvas id="detailPriceChart"></canvas>
+                            </div>
+                        `;
+
+                    const ctxPr = document.getElementById('detailPrChart').getContext('2d');
+                    destroyChart(ctxPr.canvas);
+                    chartInstances.set(ctxPr.canvas, new Chart(ctxPr, {
+                        type: 'line',
+                        data: {
+                            labels: data.dates,
+                            datasets: [
+                                {
+                                    label: `${code} PR 值`,
+                                    data: data.pr_values,
+                                    borderColor: '#C0392B',
+                                    backgroundColor: 'rgba(192, 57, 43, 0.1)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    yAxisID: 'y-left',
+                                    pointRadius: 3
+                                },
+                                {
+                                    label: '加權指數',
+                                    data: data.twii_values,
+                                    borderColor: '#16A085',
+                                    borderWidth: 1.5,
+                                    fill: false,
+                                    yAxisID: 'y-right',
+                                    pointRadius: 3
+                                }
+                            ]
+                        },
+                        options: {
+                            plugins: {
+                                legend: { labels: { font: { size: 14 }, color: '#34495E' } },
+                                tooltip: { enabled: true },
+                                title: { display: false }
+                            },
+                            scales: {
+                                x: {
+                                    title: { display: true, text: '日期', font: { size: 16 }, color: '#34495E' },
+                                    ticks: { font: { size: 12 }, color: '#7F8C8D' },
+                                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                },
+                                'y-left': {
+                                    position: 'left',
+                                    title: { display: true, text: 'PR 值', font: { size: 16 }, color: '#34495E' },
+                                    ticks: { font: { size: 12 }, color: '#7F8C8D', maxTicksLimit: 8 },
+                                    max: 100, min: 0,
+                                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                },
+                                'y-right': {
+                                    position: 'right',
+                                    title: { display: true, text: '加權指數', font: { size: 16 }, color: '#34495E' },
+                                    ticks: { font: { size: 12 }, color: '#7F8C8D', maxTicksLimit: 8 },
+                                    grid: { display: false }
+                                }
+                            },
+                            elements: { line: { tension: 0.1 } },
+                            backgroundColor: '#F9FAFB'
+                        }
+                    }));
+
+                    const ctxPrice = document.getElementById('detailPriceChart').getContext('2d');
+                    const stockPrices = data.stock_prices.filter(p => p !== null && !isNaN(p));
+                    const maxPrice = Math.max(...stockPrices);
+                    const minPrice = Math.min(...stockPrices);
+                    const priceRange = maxPrice - minPrice;
+                    const buffer = Math.max(priceRange * 0.1, 10);
+                    const priceMax = maxPrice + buffer;
+                    const priceMin = Math.max(minPrice - buffer, 0);
+
+                    destroyChart(ctxPrice.canvas);
+                    chartInstances.set(ctxPrice.canvas, new Chart(ctxPrice, {
+                        type: 'bar',
+                        data: {
+                            labels: data.dates,
+                            datasets: [
+                                {
+                                    label: `${code} 股價`,
+                                    type: 'line',
+                                    data: data.stock_prices,
+                                    borderColor: '#3498DB',
+                                    borderWidth: 2,
+                                    fill: false,
+                                    yAxisID: 'y-left',
+                                    pointRadius: 3
+                                },
+                                {
+                                    label: '成交量(張)',
+                                    type: 'bar',
+                                    data: data.volumes,
+                                    backgroundColor: 'rgba(149, 165, 166, 0.6)',
+                                    yAxisID: 'y-right'
+                                }
+                            ]
+                        },
+                        options: {
+                            plugins: {
+                                legend: { labels: { font: { size: 14 }, color: '#34495E' } },
+                                tooltip: { enabled: true },
+                                title: { display: false }
+                            },
+                            scales: {
+                                x: {
+                                    title: { display: true, text: '日期', font: { size: 16 }, color: '#34495E' },
+                                    ticks: { font: { size: 12 }, color: '#7F8C8D' },
+                                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                },
+                                'y-left': {
+                                    position: 'left',
+                                    title: { display: true, text: '股價', font: { size: 16 }, color: '#34495E' },
+                                    ticks: { font: { size: 12 }, color: '#7F8C8D', maxTicksLimit: 8 },
+                                    max: priceMax,
+                                    min: priceMin,
+                                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                },
+                                'y-right': {
+                                    position: 'right',
+                                    title: { display: true, text: '成交量(張)', font: { size: 16 }, color: '#34495E' },
+                                    ticks: { font: { size: 12 }, color: '#7F8C8D', maxTicksLimit: 8 },
+                                    grid: { display: false }
+                                }
+                            },
+                            elements: { line: { tension: 0.1 } },
+                            backgroundColor: '#F9FAFB'
+                        }
+                    }));
+                })
+                .catch(error => {
+                    console.error('圖表資料載入失敗:', error);
+                    detailDiv.innerHTML = '<p class="error">無法載入圖表資料，請稍後再試</p>';
+                });
+        }
+
+        // 表格圖表顯示
+        document.querySelectorAll('.company-link').forEach(link => {
+            link.addEventListener('click', function () {
+                const code = this.getAttribute('data-code');
+                const chartRow = this.closest('tr').nextElementSibling;
+                const prCanvas = chartRow.querySelector('.pr-chart');
+                const priceCanvas = chartRow.querySelector('.price-chart');
+                const isVisible = chartRow.style.display === 'table-row';
+
+                document.querySelectorAll('.chart-row').forEach(row => row.style.display = 'none');
+
+                if (!isVisible) {
+                    chartRow.innerHTML = '<td colspan="7"><p class="loading">載入中...</p></td>';
+                    chartRow.style.display = 'table-row';
+                    fetch(`/get_chart_data/${encodeURIComponent(code)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                chartRow.innerHTML = `<td colspan="7"><p class="error">${data.error}</p></td>`;
+                                return;
+                            }
+
+                            chartRow.innerHTML = `
+                                    <td colspan="7">
+                                        <div class="chart-container">
+                                            <canvas class="pr-chart"></canvas>
+                                            <canvas class="price-chart"></canvas>
+                                        </div>
+                                    </td>
+                                `;
+                            const newPrCanvas = chartRow.querySelector('.pr-chart');
+                            const newPriceCanvas = chartRow.querySelector('.price-chart');
+
+                            const ctxPr = newPrCanvas.getContext('2d');
+                            destroyChart(newPrCanvas);
+                            chartInstances.set(newPrCanvas, new Chart(ctxPr, {
+                                type: 'line',
+                                data: {
+                                    labels: data.dates,
+                                    datasets: [
+                                        {
+                                            label: `${code} PR 值`,
+                                            data: data.pr_values,
+                                            borderColor: '#C0392B',
+                                            backgroundColor: 'rgba(192, 57, 43, 0.1)',
+                                            borderWidth: 2,
+                                            fill: true,
+                                            yAxisID: 'y-left',
+                                            pointRadius: 3
+                                        },
+                                        {
+                                            label: '加權指數',
+                                            data: data.twii_values,
+                                            borderColor: '#16A085',
+                                            borderWidth: 1.5,
+                                            fill: false,
+                                            yAxisID: 'y-right',
+                                            pointRadius: 3
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    plugins: {
+                                        legend: { labels: { font: { size: 14 }, color: '#34495E' } },
+                                        tooltip: { enabled: true },
+                                        title: { display: false }
+                                    },
+                                    scales: {
+                                        x: {
+                                            title: { display: true, text: '日期', font: { size: 16 }, color: '#34495E' },
+                                            ticks: { font: { size: 12 }, color: '#7F8C8D' },
+                                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                        },
+                                        'y-left': {
+                                            position: 'left',
+                                            title: { display: true, text: 'PR 值', font: { size: 16 }, color: '#34495E' },
+                                            ticks: { font: { size: 12 }, color: '#7F8C8D', maxTicksLimit: 8 },
+                                            max: 100, min: 0,
+                                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                        },
+                                        'y-right': {
+                                            position: 'right',
+                                            title: { display: true, text: '加權指數', font: { size: 16 }, color: '#34495E' },
+                                            ticks: { font: { size: 12 }, color: '#7F8C8D', maxTicksLimit: 8 },
+                                            grid: { display: false }
+                                        }
+                                    },
+                                    elements: { line: { tension: 0.1 } },
+                                    backgroundColor: '#F9FAFB'
+                                }
+                            }));
+
+                            const ctxPrice = newPriceCanvas.getContext('2d');
+                            const stockPrices = data.stock_prices.filter(p => p !== null && !isNaN(p));
+                            const maxPrice = Math.max(...stockPrices);
+                            const minPrice = Math.min(...stockPrices);
+                            const priceRange = maxPrice - minPrice;
+                            const buffer = Math.max(priceRange * 0.1, 10);
+                            const priceMax = maxPrice + buffer;
+                            const priceMin = Math.max(minPrice - buffer, 0);
+
+                            destroyChart(newPriceCanvas);
+                            chartInstances.set(newPriceCanvas, new Chart(ctxPrice, {
+                                type: 'bar',
+                                data: {
+                                    labels: data.dates,
+                                    datasets: [
+                                        {
+                                            label: `${code} 股價`,
+                                            type: 'line',
+                                            data: data.stock_prices,
+                                            borderColor: '#3498DB',
+                                            borderWidth: 2,
+                                            fill: false,
+                                            yAxisID: 'y-left',
+                                            pointRadius: 3
+                                        },
+                                        {
+                                            label: '成交量(張)',
+                                            type: 'bar',
+                                            data: data.volumes,
+                                            backgroundColor: 'rgba(149, 165, 166, 0.6)',
+                                            yAxisID: 'y-right'
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    plugins: {
+                                        legend: { labels: { font: { size: 14 }, color: '#34495E' } },
+                                        tooltip: { enabled: true },
+                                        title: { display: false }
+                                    },
+                                    scales: {
+                                        x: {
+                                            title: { display: true, text: '日期', font: { size: 16 }, color: '#34495E' },
+                                            ticks: { font: { size: 12 }, color: '#7F8C8D' },
+                                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                        },
+                                        'y-left': {
+                                            position: 'left',
+                                            title: { display: true, text: '股價', font: { size: 16 }, color: '#34495E' },
+                                            ticks: { font: { size: 12 }, color: '#7F8C8D', maxTicksLimit: 8 },
+                                            max: priceMax,
+                                            min: priceMin,
+                                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                        },
+                                        'y-right': {
+                                            position: 'right',
+                                            title: { display: true, text: '成交量(張)', font: { size: 16 }, color: '#34495E' },
+                                            ticks: { font: { size: 12 }, color: '#7F8C8D', maxTicksLimit: 8 },
+                                            grid: { display: false }
+                                        }
+                                    },
+                                    elements: { line: { tension: 0.1 } },
+                                    backgroundColor: '#F9FAFB'
+                                }
+                            }));
+                        })
+                        .catch(error => {
+                            console.error('圖表載入失敗:', error);
+                            chartRow.innerHTML = '<td colspan="7"><p class="error">無法載入圖表資料，請稍後再試</p></td>';
+                        });
+                }
+            });
+        });
+
+        // 進度更新邏輯
+        document.getElementById('fetchDataBtn').addEventListener('click', function () {
+            fetch('/fetch_data', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'started') {
+                        updateProgress();
+                    }
+                })
+                .catch(error => {
+                    console.error('資料抓取失敗:', error);
+                    document.getElementById('progress-text').textContent = '進度: 0% - 抓取失敗';
+                });
+        });
+
+        function updateProgress() {
+            fetch('/progress')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('progress-fill').style.width = `${data.progress}%`;
+                    document.getElementById('progress-text').textContent = `進度: ${data.progress}% - ${data.message}`;
+                    if (data.progress < 100) {
+                        setTimeout(updateProgress, data.progress > 90 ? 500 : 1000);
+                    } else {
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('進度更新失敗:', error);
+                    document.getElementById('progress-text').textContent = '進度更新失敗';
+                });
+        }
+
+        // 排序邏輯
+        document.querySelectorAll('.sort-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const tableId = this.getAttribute('data-table');
+                const column = this.getAttribute('data-column');
+                const order = this.getAttribute('data-order');
+                const table = document.getElementById(tableId);
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr:not(.chart-row)'));
+
+                rows.sort((a, b) => {
+                    const aValueText = a.querySelector(`td:nth-child(${column === 'Price' ? 4 : 5})`).textContent;
+                    const bValueText = b.querySelector(`td:nth-child(${column === 'Price' ? 4 : 5})`).textContent;
+                    const aValue = aValueText === 'N/A' || aValueText === '' ? (order === 'asc' ? Infinity : -Infinity) : parseFloat(aValueText) || 0;
+                    const bValue = bValueText === 'N/A' || bValueText === '' ? (order === 'asc' ? Infinity : -Infinity) : parseFloat(bValueText) || 0;
+                    return order === 'asc' ? aValue - bValue : bValue - aValue;
+                });
+
+                rows.forEach(row => {
+                    const chartRow = tbody.querySelector('.chart-row[data-code="' + row.querySelector('.company-link').getAttribute('data-code') + '"]');
+                    tbody.appendChild(row);
+                    if (chartRow) tbody.appendChild(chartRow);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
