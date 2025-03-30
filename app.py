@@ -20,18 +20,12 @@ progress = {'value': 0, 'message': '未開始'}
 
 # 動態獲取資料庫連接
 def get_db_connection():
-    if 'RDS_HOSTNAME' in os.environ:
-        db_config = {
-            'host': os.environ['RDS_HOSTNAME'],
-            'user': os.environ['RDS_USERNAME'],
-            'password': os.environ['RDS_PASSWORD'],
-            'database': os.environ['RDS_DB_NAME'],
-            'port': os.environ.get('RDS_PORT', '3306'),
-        }
-        connection_string = "sqlite:////app/stock_data.db"
-        return create_engine(connection_string)
-    else:
-        raise ValueError("RDS 環境變數未設置，請在 AWS Elastic Beanstalk 中配置")
+    connection_string = os.environ.get('DATABASE_URL')
+    if not connection_string:
+        raise ValueError("DATABASE_URL 環境變數未設置，請在 Render 中配置")
+    # Render 的 PostgreSQL URL 需要將 "postgres://" 替換為 "postgresql://"
+    connection_string = connection_string.replace("postgres://", "postgresql://")
+    return create_engine(connection_string)
 
 engine = get_db_connection()
 
