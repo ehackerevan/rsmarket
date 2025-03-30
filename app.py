@@ -449,7 +449,7 @@ def update_data_task():
         logging.error(f"資料更新過程中發生錯誤: {e}")
 
 # 主頁路由
-@application.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def index():
     init_db()
     try:
@@ -486,7 +486,7 @@ def index():
         return render_template('results.html', high_pr=[], pr_new_high=[], new_high=[], low_pr_new_low=[])
 
 # 抓取資料路由
-@application.route('/fetch_data', methods=['POST'])
+@app.route('/fetch_data', methods=['POST'])
 def fetch_data():
     global progress
     if progress['value'] > 0 and progress['value'] < 100:
@@ -497,13 +497,13 @@ def fetch_data():
         return jsonify({'status': 'started'})
 
 # 進度查詢路由
-@application.route('/progress')
+@app.route('/progress')
 def get_progress():
     global progress
     return jsonify({'progress': progress['value'], 'message': progress['message']})
 
 # 圖表資料路由
-@application.route('/get_chart_data/<code>')
+@app.route('/get_chart_data/<code>')
 def get_chart_data(code):
     try:
         with engine.connect() as conn:
@@ -551,7 +551,7 @@ def get_chart_data(code):
         return jsonify({'error': str(e)})
 
 # 自動完成路由
-@application.route('/autocomplete')
+@app.route('/autocomplete')
 def autocomplete():
     query = request.args.get('query', '').lower()
     if not query:
@@ -577,4 +577,4 @@ def autocomplete():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  # 預設 5000，如果有 PORT 環境變數則使用
-    application.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)
