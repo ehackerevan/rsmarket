@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: rsmarket
+    env: python
+    repo: https://github.com/ehackerevan/rsmarket.git
+    branch: main
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn app:application
+    plan: free
+    runtime: python-3.9
