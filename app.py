@@ -34,34 +34,34 @@ def init_db():
         with engine.connect() as conn:
             # 建立 prices 表
             conn.execute(text('''CREATE TABLE IF NOT EXISTS prices (
-                                 Date DATE, 
-                                 StockCode VARCHAR(10), 
-                                 Close REAL, 
-                                 PRIMARY KEY (Date, StockCode))'''))
+                                 date DATE, 
+                                 stockcode VARCHAR(10), 
+                                 close REAL, 
+                                 PRIMARY KEY (date, stockcode))'''))
             # 建立 volumes 表
             conn.execute(text('''CREATE TABLE IF NOT EXISTS volumes (
-                                 Date DATE, 
-                                 StockCode VARCHAR(10), 
-                                 Volume REAL, 
-                                 PRIMARY KEY (Date, StockCode))'''))
+                                 date DATE, 
+                                 stockcode VARCHAR(10), 
+                                 volume REAL, 
+                                 PRIMARY KEY (date, stockcode))'''))
             # 建立 filtered_stocks 表
             conn.execute(text('''CREATE TABLE IF NOT EXISTS filtered_stocks (
-                                 Date DATE, 
-                                 StockCode VARCHAR(10), 
-                                 CompanyName VARCHAR(100), 
-                                 Price REAL, 
-                                 RS REAL, 
-                                 PR REAL, 
-                                 Volume REAL, 
-                                 FilterType VARCHAR(50), 
-                                 ExtraInfo TEXT,
-                                 PRIMARY KEY (Date, StockCode, FilterType))'''))
+                                 date DATE, 
+                                 stockcode VARCHAR(10), 
+                                 companyname VARCHAR(100), 
+                                 price REAL, 
+                                 rs REAL, 
+                                 pr REAL, 
+                                 volume REAL, 
+                                 filtertype VARCHAR(50), 
+                                 extrainfo TEXT,
+                                 PRIMARY KEY (date, stockcode, filtertype))'''))
             # 建立 pr_values 表
             conn.execute(text('''CREATE TABLE IF NOT EXISTS pr_values (
-                                 Date DATE, 
-                                 StockCode VARCHAR(10), 
-                                 PR REAL, 
-                                 PRIMARY KEY (Date, StockCode))'''))
+                                 date DATE, 
+                                 stockcode VARCHAR(10), 
+                                 pr REAL, 
+                                 PRIMARY KEY (date, stockcode))'''))
             conn.commit()
         logging.info("資料庫初始化成功")
     except Exception as e:
@@ -104,10 +104,10 @@ def download_stock_data(stock_codes, start_date, end_date):
                         if pd.notna(row[code]):
                             conn.execute(
                                 text("""
-                                INSERT INTO prices (Date, StockCode, Close)
+                                INSERT INTO prices (date, stockcode, close)
                                 VALUES (:date, :code, :close)
-                                ON CONFLICT (Date, StockCode)
-                                DO UPDATE SET Close = EXCLUDED.Close
+                                ON CONFLICT (date, stockcode)
+                                DO UPDATE SET close = EXCLUDED.close
                                 """),
                                 {'date': row['Date'].strftime('%Y-%m-%d'), 'code': code, 'close': row[code]}
                             )
@@ -120,10 +120,10 @@ def download_stock_data(stock_codes, start_date, end_date):
                         if pd.notna(row[code]):
                             conn.execute(
                                 text("""
-                                INSERT INTO volumes (Date, StockCode, Volume)
+                                INSERT INTO volumes (date, stockcode, volume)
                                 VALUES (:date, :code, :volume)
-                                ON CONFLICT (Date, StockCode)
-                                DO UPDATE SET Volume = EXCLUDED.Volume
+                                ON CONFLICT (date, stockcode)
+                                DO UPDATE SET volume = EXCLUDED.volume
                                 """),
                                 {'date': row['Date'].strftime('%Y-%m-%d'), 'code': code, 'volume': row[code]}
                             )
@@ -233,10 +233,10 @@ def calculate_pr(rs_df):
                         if pd.notna(pr_value):
                             conn.execute(
                                 text("""
-                                INSERT INTO pr_values (Date, StockCode, PR)
+                                INSERT INTO pr_values (date, stockcode, pr)
                                 VALUES (:date, :code, :pr)
-                                ON CONFLICT (Date, StockCode)
-                                DO UPDATE SET PR = EXCLUDED.PR
+                                ON CONFLICT (date, stockcode)
+                                DO UPDATE SET pr = EXCLUDED.pr
                                 """),
                                 {'date': date.strftime('%Y-%m-%d'), 'code': stock_code, 'pr': round(pr_value, 2)}
                             )
@@ -255,16 +255,16 @@ def save_filtered_to_db(df, filter_type, extra_info_col=None):
                 conn.execute(
                     text("""
                     INSERT INTO filtered_stocks 
-                    (Date, StockCode, CompanyName, Price, RS, PR, Volume, FilterType, ExtraInfo)
+                    (date, stockcode, companyname, price, rs, pr, volume, filtertype, extrainfo)
                     VALUES (:date, :code, :name, :price, :rs, :pr, :volume, :filter_type, :extra_info)
-                    ON CONFLICT (Date, StockCode, FilterType)
+                    ON CONFLICT (date, stockcode, filtertype)
                     DO UPDATE SET 
-                        CompanyName = EXCLUDED.CompanyName,
-                        Price = EXCLUDED.Price,
-                        RS = EXCLUDED.RS,
-                        PR = EXCLUDED.PR,
-                        Volume = EXCLUDED.Volume,
-                        ExtraInfo = EXCLUDED.ExtraInfo
+                        companyname = EXCLUDED.companyname,
+                        price = EXCLUDED.price,
+                        rs = EXCLUDED.rs,
+                        pr = EXCLUDED.pr,
+                        volume = EXCLUDED.volume,
+                        extrainfo = EXCLUDED.extrainfo
                     """),
                     {
                         'date': row['日期'].strftime('%Y-%m-%d'), 
@@ -498,29 +498,53 @@ def index():
     init_db()
     try:
         with engine.connect() as conn:
-            most_recent_date = conn.execute(text("SELECT MAX(Date) as Date FROM filtered_stocks")).scalar()
+            most_recent_date = conn.execute(text("SELECT MAX(date) as Date FROM filtered_stocks")).scalar()
             logging.info(f"最晚日期: {most_recent_date}")
             if not most_recent_date:
                 logging.warning("資料庫中無數據")
                 return render_template('results.html', high_pr=[], pr_new_high=[], new_high=[], low_pr_new_low=[])
             
             high_pr_df = pd.read_sql_query(
-                text("SELECT * FROM filtered_stocks WHERE FilterType='HighPR' AND Date=:date"),
+                text("""
+                SELECT date AS Date, stockcode AS StockCode, companyname AS CompanyName, 
+                       price AS Price, rs AS RS, pr AS PR, volume AS Volume, 
+                       filtertype AS FilterType, extrainfo AS ExtraInfo 
+                FROM filtered_stocks 
+                WHERE filtertype='HighPR' AND date=:date
+                """),
                 conn, params={'date': most_recent_date}
             )
             logging.info(f"HighPR 篩選結果: {len(high_pr_df)} 筆資料")
             pr_new_high_df = pd.read_sql_query(
-                text("SELECT * FROM filtered_stocks WHERE FilterType='PRNewHigh' AND Date=:date"),
+                text("""
+                SELECT date AS Date, stockcode AS StockCode, companyname AS CompanyName, 
+                       price AS Price, rs AS RS, pr AS PR, volume AS Volume, 
+                       filtertype AS FilterType, extrainfo AS ExtraInfo 
+                FROM filtered_stocks 
+                WHERE filtertype='PRNewHigh' AND date=:date
+                """),
                 conn, params={'date': most_recent_date}
             )
             logging.info(f"PRNewHigh 篩選結果: {len(pr_new_high_df)} 筆資料")
             new_high_df = pd.read_sql_query(
-                text("SELECT * FROM filtered_stocks WHERE FilterType='NewHigh' AND Date=:date"),
+                text("""
+                SELECT date AS Date, stockcode AS StockCode, companyname AS CompanyName, 
+                       price AS Price, rs AS RS, pr AS PR, volume AS Volume, 
+                       filtertype AS FilterType, extrainfo AS ExtraInfo 
+                FROM filtered_stocks 
+                WHERE filtertype='NewHigh' AND date=:date
+                """),
                 conn, params={'date': most_recent_date}
             )
             logging.info(f"NewHigh 篩選結果: {len(new_high_df)} 筆資料")
             low_pr_new_low_df = pd.read_sql_query(
-                text("SELECT * FROM filtered_stocks WHERE FilterType='LowPRNewLow' AND Date=:date"),
+                text("""
+                SELECT date AS Date, stockcode AS StockCode, companyname AS CompanyName, 
+                       price AS Price, rs AS RS, pr AS PR, volume AS Volume, 
+                       filtertype AS FilterType, extrainfo AS ExtraInfo 
+                FROM filtered_stocks 
+                WHERE filtertype='LowPRNewLow' AND date=:date
+                """),
                 conn, params={'date': most_recent_date}
             )
             logging.info(f"LowPRNewLow 篩選結果: {len(low_pr_new_low_df)} 筆資料")
@@ -558,37 +582,39 @@ def get_chart_data(code):
         with engine.connect() as conn:
             # 查詢股價資料
             prices_df = pd.read_sql_query(
-                text("SELECT Date, Close FROM prices WHERE StockCode=:code ORDER BY Date DESC LIMIT 60"),
+                text("SELECT date AS Date, close AS Close FROM prices WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
                 conn, params={'code': code}
             )
             # 查詢 PR 值
             pr_df = pd.read_sql_query(
-                text("SELECT Date, PR FROM pr_values WHERE StockCode=:code ORDER BY Date DESC LIMIT 60"),
+                text("SELECT date AS Date, pr AS PR FROM pr_values WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
                 conn, params={'code': code}
             )
             # 查詢大盤指數
             twii_df = pd.read_sql_query(
-                text("SELECT Date, Close FROM prices WHERE StockCode='^TWII' ORDER BY Date DESC LIMIT 60"),
+                text("SELECT date AS Date, close AS Close FROM prices WHERE stockcode='^TWII' ORDER BY date DESC LIMIT 60"),
                 conn
             )
             # 查詢成交量
             volume_df = pd.read_sql_query(
-                text("SELECT Date, Volume FROM volumes WHERE StockCode=:code ORDER BY Date DESC LIMIT 60"),
+                text("SELECT date AS Date, volume AS Volume FROM volumes WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
                 conn, params={'code': code}
             )
             # 查詢公司名稱
             company_name_result = conn.execute(
-                text("SELECT CompanyName FROM filtered_stocks WHERE StockCode=:code LIMIT 1"),
+                text("SELECT companyname AS CompanyName FROM filtered_stocks WHERE stockcode=:code LIMIT 1"),
                 {'code': code}
             ).fetchone()
             company_name = company_name_result[0] if company_name_result else "未知"
         
         # 檢查查詢結果是否為空
         if prices_df.empty:
+            logging.error(f"找不到股票 {code} 的歷史股價資料")
             return jsonify({'error': f'找不到股票 {code} 的歷史股價資料'})
         
         # 檢查 Date 欄位是否存在
         if 'Date' not in prices_df.columns:
+            logging.error(f"prices 表查詢結果中缺少 Date 欄位: {prices_df.columns}")
             return jsonify({'error': '資料庫查詢結果中缺少 Date 欄位'})
         
         # 提取資料
@@ -624,10 +650,10 @@ def autocomplete():
         with engine.connect() as conn:
             results = conn.execute(
                 text("""
-                    SELECT DISTINCT StockCode, CompanyName 
+                    SELECT DISTINCT stockcode AS StockCode, companyname AS CompanyName 
                     FROM filtered_stocks 
-                    WHERE StockCode LIKE '%.TW' 
-                    AND (StockCode LIKE :query OR CompanyName LIKE :query)
+                    WHERE stockcode LIKE '%.TW' 
+                    AND (stockcode LIKE :query OR companyname LIKE :query)
                 """),
                 {'query': f'%{query}%'}
             ).fetchall()
