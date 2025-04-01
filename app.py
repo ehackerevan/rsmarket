@@ -498,7 +498,7 @@ def index():
     init_db()
     try:
         with engine.connect() as conn:
-            most_recent_date = conn.execute(text("SELECT MAX(date) as Date FROM filtered_stocks")).scalar()
+            most_recent_date = conn.execute(text("SELECT MAX(date) FROM filtered_stocks")).scalar()
             logging.info(f"最晚日期: {most_recent_date}")
             if not most_recent_date:
                 logging.warning("資料庫中無數據")
@@ -582,27 +582,27 @@ def get_chart_data(code):
         with engine.connect() as conn:
             # 查詢股價資料
             prices_df = pd.read_sql_query(
-                text("SELECT date AS Date, close AS Close FROM prices WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
+                text("SELECT date, close FROM prices WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
                 conn, params={'code': code}
             )
             # 查詢 PR 值
             pr_df = pd.read_sql_query(
-                text("SELECT date AS Date, pr AS PR FROM pr_values WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
+                text("SELECT date, pr FROM pr_values WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
                 conn, params={'code': code}
             )
             # 查詢大盤指數
             twii_df = pd.read_sql_query(
-                text("SELECT date AS Date, close AS Close FROM prices WHERE stockcode='^TWII' ORDER BY date DESC LIMIT 60"),
+                text("SELECT date, close FROM prices WHERE stockcode='^TWII' ORDER BY date DESC LIMIT 60"),
                 conn
             )
             # 查詢成交量
             volume_df = pd.read_sql_query(
-                text("SELECT date AS Date, volume AS Volume FROM volumes WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
+                text("SELECT date, volume FROM volumes WHERE stockcode=:code ORDER BY date DESC LIMIT 60"),
                 conn, params={'code': code}
             )
             # 查詢公司名稱
             company_name_result = conn.execute(
-                text("SELECT companyname AS CompanyName FROM filtered_stocks WHERE stockcode=:code LIMIT 1"),
+                text("SELECT companyname FROM filtered_stocks WHERE stockcode=:code LIMIT 1"),
                 {'code': code}
             ).fetchone()
             company_name = company_name_result[0] if company_name_result else "未知"
@@ -612,17 +612,17 @@ def get_chart_data(code):
             logging.error(f"找不到股票 {code} 的歷史股價資料")
             return jsonify({'error': f'找不到股票 {code} 的歷史股價資料'})
         
-        # 檢查 Date 欄位是否存在
-        if 'Date' not in prices_df.columns:
-            logging.error(f"prices 表查詢結果中缺少 Date 欄位: {prices_df.columns}")
-            return jsonify({'error': '資料庫查詢結果中缺少 Date 欄位'})
+        # 檢查 date 欄位是否存在
+        if 'date' not in prices_df.columns:
+            logging.error(f"prices 表查詢結果中缺少 date 欄位: {prices_df.columns}")
+            return jsonify({'error': '資料庫查詢結果中缺少 date 欄位'})
         
         # 提取資料
-        dates = prices_df['Date'].astype(str).tolist()[::-1]  # 轉為字串以避免 JSON 序列化問題
-        stock_prices = prices_df['Close'].tolist()[::-1]
-        pr_values = pr_df['PR'].tolist()[::-1] if not pr_df.empty else [np.nan] * len(dates)
-        twii_values = twii_df['Close'].tolist()[::-1] if not twii_df.empty else [np.nan] * len(dates)
-        volumes = [(v / 1000) if pd.notna(v) else np.nan for v in volume_df['Volume'].tolist()[::-1]] if not volume_df.empty else [np.nan] * len(dates)
+        dates = prices_df['date'].astype(str).tolist()[::-1]  # 直接使用小寫 date
+        stock_prices = prices_df['close'].tolist()[::-1]  # 直接使用小寫 close
+        pr_values = pr_df['pr'].tolist()[::-1] if not pr_df.empty else [np.nan] * len(dates)
+        twii_values = twii_df['close'].tolist()[::-1] if not twii_df.empty else [np.nan] * len(dates)
+        volumes = [(v / 1000) if pd.notna(v) else np.nan for v in volume_df['volume'].tolist()[::-1]] if not volume_df.empty else [np.nan] * len(dates)
         
         if len(dates) < 60:
             return jsonify({'error': '歷史數據不足 60 天'})
