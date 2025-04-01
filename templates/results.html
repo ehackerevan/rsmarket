@@ -257,8 +257,8 @@
                     <th>日期</th>
                     <th>公司代號</th>
                     <th>公司名稱</th>
-                    <th>股價 <button class="sort-btn" data-table="highPrTable" data-column="Price" data-order="asc">↑</button><button class="sort-btn" data-table="highPrTable" data-column="Price" data-order="desc">↓</button></th>
-                    <th>PR值 <button class="sort-btn" data-table="highPrTable" data-column="PR" data-order="asc">↑</button><button class="sort-btn" data-table="highPrTable" data-column="PR" data-order="desc">↓</button></th>
+                    <th>股價 <button class="sort-btn" data-table="highPrTable" data-column="price" data-order="asc">↑</button><button class="sort-btn" data-table="highPrTable" data-column="price" data-order="desc">↓</button></th>
+                    <th>PR值 <button class="sort-btn" data-table="highPrTable" data-column="pr" data-order="asc">↑</button><button class="sort-btn" data-table="highPrTable" data-column="pr" data-order="desc">↓</button></th>
                     <th>成交量(張)</th>
                     <th>連續天數</th>
                 </tr>
@@ -267,15 +267,15 @@
                 {% if high_pr %}
                 {% for row in high_pr %}
                 <tr>
-                    <td>{{ row.Date }}</td>
-                    <td><span class="company-link" data-code="{{ row.StockCode }}">{{ row.StockCode }}</span></td>
-                    <td>{{ row.CompanyName }}</td>
-                    <td>{{ row.Price }}</td>
-                    <td>{{ row.PR }}</td>
-                    <td>{{ row.Volume }}</td>
-                    <td>{{ row.ExtraInfo }}</td>
+                    <td>{{ row.date }}</td>
+                    <td><span class="company-link" data-code="{{ row.stockcode }}">{{ row.stockcode }}</span></td>
+                    <td>{{ row.companyname }}</td>
+                    <td>{{ row.price }}</td>
+                    <td>{{ row.pr }}</td>
+                    <td>{{ row.volume }}</td>
+                    <td>{{ row.extrainfo }}</td>
                 </tr>
-                <tr class="chart-row" data-code="{{ row.StockCode }}">
+                <tr class="chart-row" data-code="{{ row.stockcode }}">
                     <td colspan="7">
                         <div class="chart-container">
                             <canvas class="pr-chart"></canvas>
@@ -299,8 +299,8 @@
                     <th>日期</th>
                     <th>公司代號</th>
                     <th>公司名稱</th>
-                    <th>股價 <button class="sort-btn" data-table="prNewHighTable" data-column="Price" data-order="asc">↑</button><button class="sort-btn" data-table="prNewHighTable" data-column="Price" data-order="desc">↓</button></th>
-                    <th>PR值 <button class="sort-btn" data-table="prNewHighTable" data-column="PR" data-order="asc">↑</button><button class="sort-btn" data-table="prNewHighTable" data-column="PR" data-order="desc">↓</button></th>
+                    <th>股價 <button class="sort-btn" data-table="prNewHighTable" data-column="price" data-order="asc">↑</button><button class="sort-btn" data-table="prNewHighTable" data-column="price" data-order="desc">↓</button></th>
+                    <th>PR值 <button class="sort-btn" data-table="prNewHighTable" data-column="pr" data-order="asc">↑</button><button class="sort-btn" data-table="prNewHighTable" data-column="pr" data-order="desc">↓</button></th>
                     <th>成交量(張)</th>
                     <th>新高天數</th>
                 </tr>
@@ -309,15 +309,15 @@
                 {% if pr_new_high %}
                 {% for row in pr_new_high %}
                 <tr>
-                    <td>{{ row.Date }}</td>
-                    <td><span class="company-link" data-code="{{ row.StockCode }}">{{ row.StockCode }}</span></td>
-                    <td>{{ row.CompanyName }}</td>
-                    <td>{{ row.Price }}</td>
-                    <td>{{ row.PR }}</td>
-                    <td>{{ row.Volume }}</td>
-                    <td>{{ row.ExtraInfo }}</td>
+                    <td>{{ row.date }}</td>
+                    <td><span class="company-link" data-code="{{ row.stockcode }}">{{ row.stockcode }}</span></td>
+                    <td>{{ row.companyname }}</td>
+                    <td>{{ row.price }}</td>
+                    <td>{{ row.pr }}</td>
+                    <td>{{ row.volume }}</td>
+                    <td>{{ row.extrainfo }}</td>
                 </tr>
-                <tr class="chart-row" data-code="{{ row.StockCode }}">
+                <tr class="chart-row" data-code="{{ row.stockcode }}">
                     <td colspan="7">
                         <div class="chart-container">
                             <canvas class="pr-chart"></canvas>
@@ -341,8 +341,8 @@
                     <th>日期</th>
                     <th>公司代號</th>
                     <th>公司名稱</th>
-                    <th>股價 <button class="sort-btn" data-table="newHighTable" data-column="Price" data-order="asc">↑</button><button class="sort-btn" data-table="newHighTable" data-column="Price" data-order="desc">↓</button></th>
-                    <th>PR值 <button class="sort-btn" data-table="newHighTable" data-column="PR" data-order="asc">↑</button><button class="sort-btn" data-table="newHighTable" data-column="PR" data-order="desc">↓</button></th>
+                    <th>股價 <button class="sort-btn" data-table="newHighTable" data-column="price" data-order="asc">↑</button><button class="sort-btn" data-table="newHighTable" data-column="price" data-order="desc">↓</button></th>
+                    <th>PR值 <button class="sort-btn" data-table="newHighTable" data-column="pr" data-order="asc">↑</button><button class="sort-btn" data-table="newHighTable" data-column="pr" data-order="desc">↓</button></th>
                     <th>成交量(張)</th>
                     <th>新高天數</th>
                 </tr>
@@ -351,15 +351,15 @@
                 {% if new_high %}
                 {% for row in new_high %}
                 <tr>
-                    <td>{{ row.Date }}</td>
-                    <td><span class="company-link" data-code="{{ row.StockCode }}">{{ row.StockCode }}</span></td>
-                    <td>{{ row.CompanyName }}</td>
-                    <td>{{ row.Price }}</td>
-                    <td>{{ row.PR }}</td>
-                    <td>{{ row.Volume }}</td>
-                    <td>{{ row.ExtraInfo }}</td>
+                    <td>{{ row.date }}</td>
+                    <td><span class="company-link" data-code="{{ row.stockcode }}">{{ row.stockcode }}</span></td>
+                    <td>{{ row.companyname }}</td>
+                    <td>{{ row.price }}</td>
+                    <td>{{ row.pr }}</td>
+                    <td>{{ row.volume }}</td>
+                    <td>{{ row.extrainfo }}</td>
                 </tr>
-                <tr class="chart-row" data-code="{{ row.StockCode }}">
+                <tr class="chart-row" data-code="{{ row.stockcode }}">
                     <td colspan="7">
                         <div class="chart-container">
                             <canvas class="pr-chart"></canvas>
@@ -383,8 +383,8 @@
                     <th>日期</th>
                     <th>公司代號</th>
                     <th>公司名稱</th>
-                    <th>股價 <button class="sort-btn" data-table="lowPrNewLowTable" data-column="Price" data-order="asc">↑</button><button class="sort-btn" data-table="lowPrNewLowTable" data-column="Price" data-order="desc">↓</button></th>
-                    <th>PR值 <button class="sort-btn" data-table="lowPrNewLowTable" data-column="PR" data-order="asc">↑</button><button class="sort-btn" data-table="lowPrNewLowTable" data-column="PR" data-order="desc">↓</button></th>
+                    <th>股價 <button class="sort-btn" data-table="lowPrNewLowTable" data-column="price" data-order="asc">↑</button><button class="sort-btn" data-table="lowPrNewLowTable" data-column="price" data-order="desc">↓</button></th>
+                    <th>PR值 <button class="sort-btn" data-table="lowPrNewLowTable" data-column="pr" data-order="asc">↑</button><button class="sort-btn" data-table="lowPrNewLowTable" data-column="pr" data-order="desc">↓</button></th>
                     <th>成交量(張)</th>
                     <th>新低天數</th>
                 </tr>
@@ -393,15 +393,15 @@
                 {% if low_pr_new_low %}
                 {% for row in low_pr_new_low %}
                 <tr>
-                    <td>{{ row.Date }}</td>
-                    <td><span class="company-link" data-code="{{ row.StockCode }}">{{ row.StockCode }}</span></td>
-                    <td>{{ row.CompanyName }}</td>
-                    <td>{{ row.Price }}</td>
-                    <td>{{ row.PR }}</td>
-                    <td>{{ row.Volume }}</td>
-                    <td>{{ row.ExtraInfo }}</td>
+                    <td>{{ row.date }}</td>
+                    <td><span class="company-link" data-code="{{ row.stockcode }}">{{ row.stockcode }}</span></td>
+                    <td>{{ row.companyname }}</td>
+                    <td>{{ row.price }}</td>
+                    <td>{{ row.pr }}</td>
+                    <td>{{ row.volume }}</td>
+                    <td>{{ row.extrainfo }}</td>
                 </tr>
-                <tr class="chart-row" data-code="{{ row.StockCode }}">
+                <tr class="chart-row" data-code="{{ row.stockcode }}">
                     <td colspan="7">
                         <div class="chart-container">
                             <canvas class="pr-chart"></canvas>
@@ -520,15 +520,15 @@
                     const pr = data.pr_values[data.pr_values.length - 1] || 'N/A';
 
                     detailDiv.innerHTML = `
-                            <h2>公司詳細資訊 - ${code}</h2>
-                            <p>公司名稱: ${name}</p>
-                            <p>最新股價: ${price}</p>
-                            <p>最新 PR 值: ${pr}</p>
-                            <div class="chart-container">
-                                <canvas id="detailPrChart"></canvas>
-                                <canvas id="detailPriceChart"></canvas>
-                            </div>
-                        `;
+                                <h2>公司詳細資訊 - ${code}</h2>
+                                <p>公司名稱: ${name}</p>
+                                <p>最新股價: ${price}</p>
+                                <p>最新 PR 值: ${pr}</p>
+                                <div class="chart-container">
+                                    <canvas id="detailPrChart"></canvas>
+                                    <canvas id="detailPriceChart"></canvas>
+                                </div>
+                            `;
 
                     const ctxPr = document.getElementById('detailPrChart').getContext('2d');
                     destroyChart(ctxPr.canvas);
@@ -684,13 +684,13 @@
                             }
 
                             chartRow.innerHTML = `
-                                    <td colspan="7">
-                                        <div class="chart-container">
-                                            <canvas class="pr-chart"></canvas>
-                                            <canvas class="price-chart"></canvas>
-                                        </div>
-                                    </td>
-                                `;
+                                        <td colspan="7">
+                                            <div class="chart-container">
+                                                <canvas class="pr-chart"></canvas>
+                                                <canvas class="price-chart"></canvas>
+                                            </div>
+                                        </td>
+                                    `;
                             const newPrCanvas = chartRow.querySelector('.pr-chart');
                             const newPriceCanvas = chartRow.querySelector('.price-chart');
 
@@ -871,8 +871,8 @@
                 const rows = Array.from(tbody.querySelectorAll('tr:not(.chart-row)'));
 
                 rows.sort((a, b) => {
-                    const aValueText = a.querySelector(`td:nth-child(${column === 'Price' ? 4 : 5})`).textContent;
-                    const bValueText = b.querySelector(`td:nth-child(${column === 'Price' ? 4 : 5})`).textContent;
+                    const aValueText = a.querySelector(`td:nth-child(${column === 'price' ? 4 : 5})`).textContent;
+                    const bValueText = b.querySelector(`td:nth-child(${column === 'price' ? 4 : 5})`).textContent;
                     const aValue = aValueText === 'N/A' || aValueText === '' ? (order === 'asc' ? Infinity : -Infinity) : parseFloat(aValueText) || 0;
                     const bValue = bValueText === 'N/A' || bValueText === '' ? (order === 'asc' ? Infinity : -Infinity) : parseFloat(bValueText) || 0;
                     return order === 'asc' ? aValue - bValue : bValue - aValue;
